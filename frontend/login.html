@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Login — PhishGuard AI</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="/static/style.css" />
+</head>
+<body class="auth-body">
+    <div class="auth-shell">
+        <a href="/" class="auth-brand">
+            <span class="brand-mark" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M12 2L4 5v6c0 5 3.5 9.4 8 11 4.5-1.6 8-6 8-11V5l-8-3z" fill="currentColor" opacity="0.25"/>
+                    <path d="M12 2L4 5v6c0 5 3.5 9.4 8 11 4.5-1.6 8-6 8-11V5l-8-3z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" fill="none"/>
+                    <path d="M9 12l2 2 4-4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+                </svg>
+            </span>
+            <span class="brand-text">PhishGuard <span class="brand-accent">AI</span></span>
+        </a>
+        <div class="auth-card">
+            <h1>Welcome back</h1>
+            <p class="auth-subtitle">Sign in to access your phishing detection dashboard.</p>
+
+            <div id="alert" class="alert hidden" role="alert"></div>
+
+            <form id="login-form" class="form" novalidate>
+                <div class="form-group">
+                    <label for="email">Email</label>
+                    <input type="email" id="email" name="email" required autocomplete="email" placeholder="you@example.com" />
+                </div>
+                <div class="form-group">
+                    <label for="password">Password</label>
+                    <input type="password" id="password" name="password" required autocomplete="current-password" placeholder="••••••••" />
+                </div>
+                <label class="checkbox-row">
+                    <input type="checkbox" id="remember" name="remember" />
+                    <span>Remember me on this device</span>
+                </label>
+                <button type="submit" class="btn btn-primary btn-block" id="submit-btn">
+                    <span class="btn-label">Sign In</span>
+                    <span class="btn-spinner hidden"></span>
+                </button>
+            </form>
+
+            <p class="auth-foot">
+                Don't have an account? <a href="/register">Create one</a>
+            </p>
+        </div>
+    </div>
+
+    <script src="/static/app.js"></script>
+    <script>
+        const form = document.getElementById('login-form');
+        const alertBox = document.getElementById('alert');
+        const submitBtn = document.getElementById('submit-btn');
+        const btnLabel = submitBtn.querySelector('.btn-label');
+        const btnSpinner = submitBtn.querySelector('.btn-spinner');
+        const remember = document.getElementById('remember');
+
+        const rememberedEmail = localStorage.getItem('phishguard_remember_email');
+        if (rememberedEmail) {
+            document.getElementById('email').value = rememberedEmail;
+            remember.checked = true;
+        }
+
+        if (getToken()) {
+            window.location.href = '/dashboard';
+        }
+
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            showAlert(alertBox, '', '');
+
+            const email = document.getElementById('email').value.trim();
+            const password = document.getElementById('password').value;
+
+            if (!email || !password) {
+                showAlert(alertBox, 'Please enter both email and password.', 'error');
+                return;
+            }
+
+            setLoading(submitBtn, btnLabel, btnSpinner, true);
+
+            try {
+                const data = await apiFetch('/api/auth/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email, password }),
+                });
+                setToken(data.access_token);
+                if (remember.checked) {
+                    localStorage.setItem('phishguard_remember_email', email);
+                } else {
+                    localStorage.removeItem('phishguard_remember_email');
+                }
+                showAlert(alertBox, 'Login successful — redirecting...', 'success');
+                setTimeout(() => { window.location.href = '/dashboard'; }, 400);
+            } catch (err) {
+                showAlert(alertBox, err.message || 'Login failed. Please try again.', 'error');
+            } finally {
+                setLoading(submitBtn, btnLabel, btnSpinner, false);
+            }
+        });
+    </script>
+</body>
+</html>
